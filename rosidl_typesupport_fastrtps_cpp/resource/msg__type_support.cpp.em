@@ -218,9 +218,9 @@ cdr_deserialize(
     size_t size = static_cast<size_t>(cdrSize);
 
     // Check there are at least 'size' remaining bytes in the CDR stream before resizing
-    auto old_state = cdr.get_state();
+    auto old_state = cdr.getState();
     bool correct_size = cdr.jump(size);
-    cdr.set_state(old_state);
+    cdr.setState(old_state);
     if (!correct_size) {
       fprintf(stderr, "sequence size exceeds remaining buffer\n");
       return false;
