@@ -2,8 +2,8 @@
 Changelog for package rosidl_typesupport_fastrtps_c
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.9.1 (2025-07-29)
+------------------
 * fix cmake deprecation (`#134 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/134>`_)
 * Check remaining size before resizing sequences (`#130 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/130>`_)
 * Contributors: Miguel Company, mosfet80
