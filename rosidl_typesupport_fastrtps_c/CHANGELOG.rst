@@ -2,8 +2,8 @@
 Changelog for package rosidl_typesupport_fastrtps_c
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.6.2 (2025-08-05)
+------------------
 * Check remaining size before resizing sequences (`#130 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/130>`_) (`#132 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/132>`_)
   * Check remaining size before resizing sequences
   * Avoid linter complaining of too long function.
