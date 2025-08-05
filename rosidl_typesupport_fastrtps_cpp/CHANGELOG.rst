@@ -2,6 +2,16 @@
 Changelog for package rosidl_typesupport_fastrtps_cpp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Check remaining size before resizing sequences (`#130 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/130>`_) (`#132 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/132>`_)
+  * Check remaining size before resizing sequences
+  * Avoid linter complaining of too long function.
+  ---------
+  (cherry picked from commit 7283329f7c3cb654e7b843ab127ab2eda680662a)
+  Co-authored-by: Miguel Company <miguelcompany@eprosima.com>
+* Contributors: mergify[bot]
+
 3.6.1 (2024-12-27)
 ------------------
 * Remove deprecated functions benchmark tests (`#122 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/122>`_) (`#123 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/123>`_)
