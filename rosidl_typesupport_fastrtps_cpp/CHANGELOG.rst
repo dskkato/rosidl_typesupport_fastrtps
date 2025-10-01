@@ -2,8 +2,8 @@
 Changelog for package rosidl_typesupport_fastrtps_cpp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.9.2 (2025-10-01)
+------------------
 * Removed deprecated code (`#135 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/135>`_)
 * Contributors: Alejandro Hernández Cordero
 
