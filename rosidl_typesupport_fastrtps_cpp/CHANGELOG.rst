@@ -2,8 +2,8 @@
 Changelog for package rosidl_typesupport_fastrtps_cpp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.8.2 (2025-11-21)
+------------------
 * Switch ament_index_python and rosidl_cli to exec_depend. (`#137 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/137>`_) (`#139 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/139>`_)
   They are both Python libraries, so they are really only
   needed at exec time.
