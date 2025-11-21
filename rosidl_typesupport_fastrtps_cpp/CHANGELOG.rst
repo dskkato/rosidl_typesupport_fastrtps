@@ -2,6 +2,11 @@
 Changelog for package rosidl_typesupport_fastrtps_cpp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+2.2.4 (2025-11-21)
+------------------
+* Switch ament_index_python and rosidl_cli to exec_depend. (backport `#137 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/137>`_) (`#141 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/141>`_)
+* Contributors: mergify[bot]
+
 2.2.3 (2025-09-24)
 ------------------
 * Check remaining size before resizing sequences (`#130 <https://github.com/ros2/rosidl_typesupport_fastrtps/pull/130>`_) (`#133 <https://github.com/ros2/rosidl_typesupport_fastrtps/pull/133>`_)
