@@ -91,4 +91,25 @@ inline bool cdr_deserialize(
 
 }  // namespace rosidl_typesupport_fastrtps_cpp
 
+
+namespace eprosima { namespace fastcdr {
+
+template<>
+inline void serialize<rosidl_runtime_cpp::ByteConverter>(
+    Cdr & cdr,
+    const rosidl_runtime_cpp::ByteConverter & value)
+{
+  rosidl_typesupport_fastrtps_cpp::cdr_serialize(cdr, value);
+}
+
+template<>
+inline void deserialize<rosidl_runtime_cpp::ByteConverter>(
+    Cdr & cdr,
+    rosidl_runtime_cpp::ByteConverter & value)
+{
+  rosidl_typesupport_fastrtps_cpp::cdr_deserialize(cdr, value);
+}
+
+}}  // namespace eprosima::fastcdr
+
 #endif  // ROSIDL_TYPESUPPORT_FASTRTPS_CPP__SERIALIZATION_HELPERS_HPP_
