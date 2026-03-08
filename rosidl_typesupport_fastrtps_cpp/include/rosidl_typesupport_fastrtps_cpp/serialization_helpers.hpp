@@ -17,6 +17,8 @@
 
 #include <rosidl_typesupport_fastrtps_cpp/visibility_control.h>
 
+#include <rosidl_runtime_cpp/byte_helpers.hpp>
+
 #include <fastcdr/Cdr.h>
 #include <fastcdr/exceptions/BadParamException.h>
 
@@ -26,6 +28,20 @@
 
 namespace rosidl_typesupport_fastrtps_cpp
 {
+
+inline void cdr_serialize(
+  eprosima::fastcdr::Cdr & cdr,
+  const rosidl_runtime_cpp::ByteConverter & byte)
+{
+  cdr << byte;
+}
+
+inline void cdr_deserialize(
+  eprosima::fastcdr::Cdr & cdr,
+  rosidl_runtime_cpp::ByteConverter & byte)
+{
+  cdr >> byte;
+}
 
 inline void cdr_serialize(
   eprosima::fastcdr::Cdr & cdr,
