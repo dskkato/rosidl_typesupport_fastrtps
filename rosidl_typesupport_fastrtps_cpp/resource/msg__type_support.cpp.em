@@ -123,7 +123,8 @@ def generate_member_for_cdr_serialize(member, suffix):
   strlist = []
   strlist.append('// Member: %s' % (member.name))
 
-  if (member.has_annotation('deprecated')):
+  if member.has_annotation('deprecated'):
+    strlist.append('// *INDENT-OFF*')
     strlist.append('DISABLE_DEPRECATED_PUSH')
 
   if isinstance(member.type, AbstractNestedType):
@@ -186,8 +187,9 @@ def generate_member_for_cdr_serialize(member, suffix):
     strlist.append('  ros_message.%s,' % (member.name))
     strlist.append('  cdr);')
 
-  if (member.has_annotation('deprecated')):
+  if member.has_annotation('deprecated'):
     strlist.append('DISABLE_DEPRECATED_POP')
+    strlist.append('// *INDENT-ON*')
 
   return strlist
 }@
@@ -216,6 +218,7 @@ cdr_deserialize(
 @[for member in message.structure.members]@
   // Member: @(member.name)
 @[  if member.has_annotation('deprecated')]@
+  // *INDENT-OFF*
   DISABLE_DEPRECATED_PUSH
 @[  end if]
 @[  if isinstance(member.type, AbstractNestedType)]@
@@ -313,9 +316,9 @@ cdr_deserialize(
   @('::'.join(member.type.namespaces))::typesupport_fastrtps_cpp::cdr_deserialize(
     cdr, ros_message.@(member.name));
 @[  end if]@
-
 @[  if member.has_annotation('deprecated')]@
   DISABLE_DEPRECATED_POP
+  // *INDENT-ON*
 @[  end if]
 @[end for]@
   return true;
@@ -341,7 +344,7 @@ def generate_member_for_get_serialized_size(member, suffix):
   strlist = []
   strlist.append('// Member: %s' % (member.name))
 
-  if (member.has_annotation('deprecated')):
+  if member.has_annotation('deprecated'):
     strlist.append('DISABLE_DEPRECATED_PUSH')
 
   if isinstance(member.type, AbstractNestedType):
@@ -393,8 +396,9 @@ def generate_member_for_get_serialized_size(member, suffix):
       strlist.append('  %s::typesupport_fastrtps_cpp::get_serialized_size%s(' % (('::'.join(member.type.namespaces)), suffix))
       strlist.append('  ros_message.%s, current_alignment);' % (member.name))
 
-  if (member.has_annotation('deprecated')):
+  if member.has_annotation('deprecated'):
     strlist.append('DISABLE_DEPRECATED_POP')
+
   return strlist;
 }@
 
