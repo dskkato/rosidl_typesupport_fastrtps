@@ -28,10 +28,14 @@ find_package(fastcdr 2 REQUIRED CONFIG)
 find_package(ament_cmake_python REQUIRED)
 
 find_package(rmw REQUIRED)
+find_package(rosidl_buffer_backend REQUIRED)
 find_package(rosidl_runtime_c REQUIRED)
+find_package(rosidl_runtime_cpp REQUIRED)
 
 ament_export_dependencies(rmw)
+ament_export_dependencies(rosidl_buffer_backend)
 ament_export_dependencies(rosidl_runtime_c)
+ament_export_dependencies(rosidl_runtime_cpp)
 ament_export_dependencies(fastcdr)
 
 ament_python_install_package(${PROJECT_NAME})
@@ -45,7 +49,9 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
 target_link_libraries(${PROJECT_NAME} PUBLIC
   fastcdr
+  rosidl_buffer_backend::rosidl_buffer_backend
   rosidl_runtime_c::rosidl_runtime_c
+  rosidl_runtime_cpp::rosidl_runtime_cpp
   rmw::rmw)
 
 # Export old-style CMake variables
@@ -83,6 +89,14 @@ if(BUILD_TESTING)
 
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(test_cli_extension test/test_cli_extension.py)
+
+  ament_add_gtest(test_buffer_wire_compat
+    test/test_buffer_wire_compat.cpp)
+  if(TARGET test_buffer_wire_compat)
+    target_link_libraries(test_buffer_wire_compat
+      ${PROJECT_NAME}
+      fastcdr)
+  endif()
 endif()
 
 if(BUILD_SHARED_LIBS)
