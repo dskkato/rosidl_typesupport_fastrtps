@@ -2,6 +2,12 @@
 Changelog for package rosidl_typesupport_fastrtps_c
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.9.4 (2026-04-09)
+------------------
+* Add support for rosidl::Buffer type serialization (`#144 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/144>`_)
+* use variable to control shared/static build type (`#138 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/138>`_)
+* Contributors: Anthony Welte, CY Chen, Jay Sridharan
+
 3.9.3 (2025-11-21)
 ------------------
 * Switch ament_index_python and rosidl_cli to exec_depend. (`#137 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/137>`_)
