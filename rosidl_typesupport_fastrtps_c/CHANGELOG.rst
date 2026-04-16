@@ -2,6 +2,9 @@
 Changelog for package rosidl_typesupport_fastrtps_c
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.9.5 (2026-04-16)
+------------------
+
 3.9.4 (2026-04-09)
 ------------------
 * Add support for rosidl::Buffer type serialization (`#144 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/144>`_)
