@@ -25,6 +25,7 @@ header_files = [
     'limits',
     'stdexcept',
     'string',
+    'rcutils/logging_macros.h',
     'rosidl_typesupport_cpp/message_type_support.hpp',
     'rosidl_typesupport_fastrtps_cpp/identifier.hpp',
     'rosidl_typesupport_fastrtps_cpp/message_type_support.h',
@@ -387,10 +388,9 @@ cdr_serialize_with_endpoint(
 @[  end for]@
 @[end for]@
   } catch (const std::exception & e) {
-    fprintf(
-      stderr,
-      "[@(package_name).typesupport_fastrtps_cpp] cdr_serialize_with_endpoint failed: %s\n",
-      e.what());
+    RCUTILS_LOG_ERROR_NAMED(
+      "@(package_name).typesupport_fastrtps_cpp",
+      "cdr_serialize_with_endpoint failed: %s", e.what());
     return false;
   }
   return true;
@@ -416,10 +416,9 @@ cdr_deserialize_with_endpoint(
     if (!rosidl_typesupport_fastrtps_cpp::deserialize_buffer_with_endpoint(
         cdr, ros_message.@(member.name), endpoint_info, serialization_context))
     {
-      fprintf(
-        stderr,
-        "[@(package_name).typesupport_fastrtps_cpp] "
-        "cdr_deserialize_with_endpoint: failed to deserialize '@(member.name)'\n");
+      RCUTILS_LOG_ERROR_NAMED(
+        "@(package_name).typesupport_fastrtps_cpp",
+        "cdr_deserialize_with_endpoint: failed to deserialize '@(member.name)'");
       return false;
     }
   }
