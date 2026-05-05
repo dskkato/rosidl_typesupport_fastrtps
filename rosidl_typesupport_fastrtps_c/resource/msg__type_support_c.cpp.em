@@ -45,6 +45,13 @@ for member in message.structure.members:
             _seen_nested_type_keys.add(key)
             nested_type_keys.append(key)
 
+has_buffer_field_checks = ['true' if has_direct_buffer_fields else 'false']
+has_buffer_field_checks.extend(
+    'has_buffer_fields_%s()' % '__'.join(nested_key)
+    for nested_key in nested_type_keys
+)
+has_buffer_fields_expression = ' ||\n    '.join(has_buffer_field_checks)
+
 include_parts = [package_name] + list(interface_path.parents[0].parts) + [
     'detail', convert_camel_case_to_lower_case_underscore(interface_path.stem)]
 include_base = '/'.join(include_parts)
@@ -1156,10 +1163,7 @@ ROSIDL_TYPESUPPORT_FASTRTPS_C_PUBLIC_@(package_name)
 bool has_buffer_fields_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))()
 {
   return
-    @('true' if has_direct_buffer_fields else 'false')@[for nested_key in nested_type_keys]@
-
-    || has_buffer_fields_@('__'.join(nested_key))()@[end for]@
-  ;
+    @(has_buffer_fields_expression);
 }
 @# // Collect the callback functions and provide a function to get the type support struct.
 

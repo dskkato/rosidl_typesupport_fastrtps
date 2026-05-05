@@ -529,7 +529,7 @@ cdr_deserialize_with_endpoint(
 
 @[end for]@
   return true;
-}
+}  // NOLINT(readability/fn_size)
 @{
 
 # Generates the definition for the get_serialized_size family of methods given a structure member
