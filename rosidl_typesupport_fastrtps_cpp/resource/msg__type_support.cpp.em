@@ -558,7 +558,7 @@ def generate_member_for_get_serialized_size(member, suffix):
       # Call the Buffer-specific serialization size function
       strlist.append('current_alignment +=')
       strlist.append('  rosidl_typesupport_fastrtps_cpp::get_buffer_serialized_size(')
-      strlist.append('    ros_message.%s, current_alignment);' % (member.name))
+      strlist.append('  ros_message.%s, current_alignment);' % (member.name))
       return strlist
     
     strlist.append('{')

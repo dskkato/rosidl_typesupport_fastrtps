@@ -45,12 +45,14 @@ for member in message.structure.members:
             _seen_nested_type_keys.add(key)
             nested_type_keys.append(key)
 
-has_buffer_field_checks = ['true' if has_direct_buffer_fields else 'false']
-has_buffer_field_checks.extend(
-    'has_buffer_fields_%s()' % '__'.join(nested_key)
-    for nested_key in nested_type_keys
-)
-has_buffer_fields_expression = ' ||\n    '.join(has_buffer_field_checks)
+if has_direct_buffer_fields:
+    has_buffer_fields_expression = 'true'
+else:
+    has_buffer_field_checks = [
+        'has_buffer_fields_%s()' % '__'.join(nested_key)
+        for nested_key in nested_type_keys
+    ]
+    has_buffer_fields_expression = ' ||\n    '.join(has_buffer_field_checks) or 'false'
 
 include_parts = [package_name] + list(interface_path.parents[0].parts) + [
     'detail', convert_camel_case_to_lower_case_underscore(interface_path.stem)]
@@ -673,7 +675,7 @@ def generate_member_for_get_serialized_size(member, suffix):
     strlist.append('    if (buffer != nullptr) {')
     strlist.append('      current_alignment +=')
     strlist.append('        rosidl_typesupport_fastrtps_cpp::get_buffer_serialized_size(')
-    strlist.append('          *buffer, current_alignment);')
+    strlist.append('        *buffer, current_alignment);')
     strlist.append('    }')
     strlist.append('  } else {')
     strlist.append('    size_t array_size = ros_message->%s.size;' % member.name)
@@ -1008,7 +1010,7 @@ static size_t _@(message.structure.namespaced_type.name)__get_serialized_size_ke
   const void * untyped_ros_message)
 {
   return get_serialized_size_key_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(
-      untyped_ros_message, 0);
+    untyped_ros_message, 0);
 }
 
 static
