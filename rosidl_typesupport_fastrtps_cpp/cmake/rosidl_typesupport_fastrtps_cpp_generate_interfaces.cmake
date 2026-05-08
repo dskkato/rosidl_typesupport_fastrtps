@@ -182,6 +182,10 @@ target_link_libraries(${rosidl_generate_interfaces_TARGET}${_target_suffix} PUBL
   ${rosidl_generate_interfaces_TARGET}__rosidl_generator_c
   ${rosidl_generate_interfaces_TARGET}__rosidl_generator_cpp)
 
+# Generated C++ typesupport delegates transitive Buffer-field detection to the generated C helper
+target_link_libraries(${rosidl_generate_interfaces_TARGET}${_target_suffix} PRIVATE
+  ${rosidl_generate_interfaces_TARGET}__rosidl_typesupport_fastrtps_c)
+
 # Make top level generation target depend on this library
 add_dependencies(
   ${rosidl_generate_interfaces_TARGET}
