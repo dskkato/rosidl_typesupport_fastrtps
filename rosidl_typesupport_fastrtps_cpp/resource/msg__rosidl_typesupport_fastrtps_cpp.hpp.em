@@ -107,6 +107,10 @@ max_serialized_size_key_@(message.structure.namespaced_type.name)(
   bool & is_plain,
   size_t current_alignment);
 
+bool
+ROSIDL_TYPESUPPORT_FASTRTPS_CPP_PUBLIC_@(package_name)
+has_buffer_fields_@(message.structure.namespaced_type.name)();
+
 }  // namespace typesupport_fastrtps_cpp
 @[  for ns in reversed(message.structure.namespaced_type.namespaces)]@
 

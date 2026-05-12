@@ -22,13 +22,37 @@ from rosidl_parser.definition import NamespacedType
 from rosidl_parser.definition import UnboundedSequence
 from rosidl_pycommon import convert_camel_case_to_lower_case_underscore
 
-# Detect if message has Buffer fields (only uint8[] UnboundedSequence becomes Buffer<T>)
-has_buffer_fields = False
+# Detect direct Buffer fields (only uint8[] UnboundedSequence becomes Buffer<T>).
+has_direct_buffer_fields = False
 for member in message.structure.members:
     if isinstance(member.type, UnboundedSequence):
         if isinstance(member.type.value_type, BasicType) and member.type.value_type.typename == 'uint8':
-            has_buffer_fields = True
+            has_direct_buffer_fields = True
             break
+
+# Collect nested message types so the generated C helper can compose
+# has_buffer_fields transitively without needing foreign IDL structures at
+# template expansion time.
+nested_type_keys = []
+_seen_nested_type_keys = set()
+for member in message.structure.members:
+    type_ = member.type
+    if isinstance(type_, AbstractNestedType):
+        type_ = type_.value_type
+    if isinstance(type_, NamespacedType):
+        key = (*type_.namespaces, type_.name)
+        if key not in _seen_nested_type_keys:
+            _seen_nested_type_keys.add(key)
+            nested_type_keys.append(key)
+
+if has_direct_buffer_fields:
+    has_buffer_fields_expression = 'true'
+else:
+    has_buffer_field_checks = [
+        'has_buffer_fields_%s()' % '__'.join(nested_key)
+        for nested_key in nested_type_keys
+    ]
+    has_buffer_fields_expression = ' ||\n    '.join(has_buffer_field_checks) or 'false'
 
 include_parts = [package_name] + list(interface_path.parents[0].parts) + [
     'detail', convert_camel_case_to_lower_case_underscore(interface_path.stem)]
@@ -50,7 +74,7 @@ header_files = [
     include_base + '__functions.h',
     'fastcdr/Cdr.h',
 ]
-if has_buffer_fields:
+if has_direct_buffer_fields:
     header_files.append('rosidl_typesupport_fastrtps_cpp/buffer_serialization.hpp')
 }@
 @[for header_file in header_files]@
@@ -206,6 +230,29 @@ ROSIDL_TYPESUPPORT_FASTRTPS_C_IMPORT_@(package_name)
 @[  end if]@
 const rosidl_message_type_support_t *
   ROSIDL_TYPESUPPORT_INTERFACE__MESSAGE_SYMBOL_NAME(rosidl_typesupport_fastrtps_c, @(', '.join(key)))();
+
+@[  if key[0] != package_name]@
+ROSIDL_TYPESUPPORT_FASTRTPS_C_IMPORT_@(package_name)
+@[  end if]@
+bool cdr_serialize_with_endpoint_@('__'.join(key))(
+  const @('__'.join(key)) * ros_message,
+  eprosima::fastcdr::Cdr & cdr,
+  const rmw_topic_endpoint_info_t & endpoint_info,
+  const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context);
+
+@[  if key[0] != package_name]@
+ROSIDL_TYPESUPPORT_FASTRTPS_C_IMPORT_@(package_name)
+@[  end if]@
+bool cdr_deserialize_with_endpoint_@('__'.join(key))(
+  eprosima::fastcdr::Cdr & cdr,
+  @('__'.join(key)) * ros_message,
+  const rmw_topic_endpoint_info_t & endpoint_info,
+  const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context);
+
+@[  if key[0] != package_name]@
+ROSIDL_TYPESUPPORT_FASTRTPS_C_IMPORT_@(package_name)
+@[  end if]@
+bool has_buffer_fields_@('__'.join(key))();
 @[end for]@
 
 @# // Make callback functions specific to this message type.
@@ -238,6 +285,19 @@ def generate_member_for_cdr_serialize(member, suffix):
   type_ = member.type
   if isinstance(type_, AbstractNestedType):
     type_ = type_.value_type
+
+  if (
+    suffix == '_with_endpoint' and
+    isinstance(member.type, UnboundedSequence) and
+    isinstance(member.type.value_type, BasicType) and
+    member.type.value_type.typename == 'uint8'
+  ):
+    strlist.append('  rosidl_typesupport_fastrtps_cpp::serialize_buffer_or_c_sequence_with_endpoint(')
+    strlist.append('    cdr, ros_message->%s, endpoint_info, serialization_context);' % (member.name))
+    strlist.append('}')
+    return strlist
+
+  nested_extra_args = ', endpoint_info, serialization_context' if suffix == '_with_endpoint' else ''
 
   if (
     suffix == '' and
@@ -310,7 +370,8 @@ def generate_member_for_cdr_serialize(member, suffix):
       strlist.append('  }')
     elif isinstance(member.type.value_type, BasicType) and member.type.value_type.typename == 'wchar':
       strlist.append('  for (size_t i = 0; i < size; ++i) {')
-      strlist.append('    cdr_serialize%s_%s(' % (suffix, ('__'.join(member.type.value_type.namespaced_name()))))
+      helper_suffix = '' if suffix == '_with_endpoint' else suffix
+      strlist.append('    cdr_serialize%s_%s(' % (helper_suffix, ('__'.join(member.type.value_type.namespaced_name()))))
       strlist.append('      static_cast<wchar_t *>(&array_ptr[i]), cdr);')
       strlist.append('  }')
     elif isinstance(member.type.value_type, BasicType):
@@ -318,7 +379,7 @@ def generate_member_for_cdr_serialize(member, suffix):
     else :
       strlist.append('  for (size_t i = 0; i < size; ++i) {')
       strlist.append('    cdr_serialize%s_%s(' % (suffix, ('__'.join(member.type.value_type.namespaced_name()))))
-      strlist.append('      &array_ptr[i], cdr);')
+      strlist.append('      &array_ptr[i], cdr%s);' % nested_extra_args)
       strlist.append('  }')
   elif isinstance(member.type, AbstractString):
     strlist.append('  const rosidl_runtime_c__String * str = &ros_message->%s;' % (member.name))
@@ -341,7 +402,7 @@ def generate_member_for_cdr_serialize(member, suffix):
     strlist.append('  cdr << ros_message->%s;' % (member.name))
   else:
     strlist.append('  cdr_serialize%s_%s(' % (suffix, ('__'.join(member.type.namespaced_name()))))
-    strlist.append('    &ros_message->%s, cdr);' % (member.name))
+    strlist.append('    &ros_message->%s, cdr%s);' % (member.name, nested_extra_args))
   strlist.append('}')
 
   return strlist
@@ -349,7 +410,7 @@ def generate_member_for_cdr_serialize(member, suffix):
 
 # Generates deserialization code for a single member as a list of strings.
 # Used by both the regular and _with_endpoint deserializers.
-def generate_member_for_cdr_deserialize(member):
+def generate_member_for_cdr_deserialize(member, suffix=''):
   from rosidl_parser.definition import AbstractGenericString
   from rosidl_parser.definition import AbstractNestedType
   from rosidl_parser.definition import AbstractSequence
@@ -367,6 +428,23 @@ def generate_member_for_cdr_deserialize(member):
   type_ = member.type
   if isinstance(type_, AbstractNestedType):
     type_ = type_.value_type
+
+  if (
+    suffix == '_with_endpoint' and
+    isinstance(member.type, UnboundedSequence) and
+    isinstance(member.type.value_type, BasicType) and
+    member.type.value_type.typename == 'uint8'
+  ):
+    strlist.append('  if (!rosidl_typesupport_fastrtps_cpp::deserialize_buffer_or_c_sequence_with_endpoint(')
+    strlist.append('      cdr, ros_message->%s, endpoint_info, serialization_context))' % (member.name))
+    strlist.append('  {')
+    strlist.append('    fprintf(stderr, "Failed to deserialize buffer field \'%s\'\\n");' % (member.name))
+    strlist.append('    return false;')
+    strlist.append('  }')
+    strlist.append('}')
+    return strlist
+
+  nested_extra_args = ', endpoint_info, serialization_context' if suffix == '_with_endpoint' else ''
 
   if (
     isinstance(member.type, UnboundedSequence) and
@@ -483,7 +561,7 @@ def generate_member_for_cdr_deserialize(member):
       strlist.append('  cdr.deserialize_array(array_ptr, size);')
     else:
       strlist.append('  for (size_t i = 0; i < size; ++i) {')
-      strlist.append('    cdr_deserialize_%s(cdr, &array_ptr[i]);' % '__'.join(member.type.value_type.namespaced_name()))
+      strlist.append('    cdr_deserialize%s_%s(cdr, &array_ptr[i]%s);' % (suffix, '__'.join(member.type.value_type.namespaced_name()), nested_extra_args))
       strlist.append('  }')
 
   elif isinstance(member.type, AbstractString):
@@ -520,7 +598,7 @@ def generate_member_for_cdr_deserialize(member):
   elif isinstance(member.type, BasicType):
     strlist.append('  cdr >> ros_message->%s;' % member.name)
   else:
-    strlist.append('  cdr_deserialize_%s(cdr, &ros_message->%s);' % ('__'.join(member.type.namespaced_name()), member.name))
+    strlist.append('  cdr_deserialize%s_%s(cdr, &ros_message->%s%s);' % (suffix, '__'.join(member.type.namespaced_name()), member.name, nested_extra_args))
 
   strlist.append('}')
   return strlist
@@ -597,7 +675,7 @@ def generate_member_for_get_serialized_size(member, suffix):
     strlist.append('    if (buffer != nullptr) {')
     strlist.append('      current_alignment +=')
     strlist.append('        rosidl_typesupport_fastrtps_cpp::get_buffer_serialized_size(')
-    strlist.append('          *buffer, current_alignment);')
+    strlist.append('        *buffer, current_alignment);')
     strlist.append('    }')
     strlist.append('  } else {')
     strlist.append('    size_t array_size = ros_message->%s.size;' % member.name)
@@ -932,7 +1010,7 @@ static size_t _@(message.structure.namespaced_type.name)__get_serialized_size_ke
   const void * untyped_ros_message)
 {
   return get_serialized_size_key_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(
-      untyped_ros_message, 0);
+    untyped_ros_message, 0);
 }
 
 static
@@ -1009,10 +1087,48 @@ static size_t _@(message.structure.namespaced_type.name)__max_serialized_size(ch
 }
 
 @
-@[if has_buffer_fields]@
-// Endpoint-aware serialization for C messages with Buffer fields.
-// Uses the same per-field serialization as the regular path, but for uint8[] fields
-// checks the is_rosidl_buffer flag to detect rosidl::Buffer<uint8_t>*.
+ROSIDL_TYPESUPPORT_FASTRTPS_C_PUBLIC_@(package_name)
+bool cdr_serialize_with_endpoint_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(
+  const @('__'.join(message.structure.namespaced_type.namespaced_name())) * ros_message,
+  eprosima::fastcdr::Cdr & cdr,
+  const rmw_topic_endpoint_info_t & endpoint_info,
+  const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context)
+{
+  (void)ros_message;
+  (void)endpoint_info;
+  (void)serialization_context;
+@[for member in message.structure.members]@
+@[  for line in generate_member_for_cdr_serialize(member, '_with_endpoint')]@
+  @(line)
+@[  end for]@
+
+@[end for]@
+  return true;
+}
+
+ROSIDL_TYPESUPPORT_FASTRTPS_C_PUBLIC_@(package_name)
+bool cdr_deserialize_with_endpoint_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(
+  eprosima::fastcdr::Cdr & cdr,
+  @('__'.join(message.structure.namespaced_type.namespaced_name())) * ros_message,
+  const rmw_topic_endpoint_info_t & endpoint_info,
+  const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context)
+{
+  (void)ros_message;
+  (void)endpoint_info;
+  (void)serialization_context;
+@[for member in message.structure.members]@
+@[  for line in generate_member_for_cdr_deserialize(member, '_with_endpoint')]@
+@[    if line]@
+  @(line)
+@[    else]@
+
+@[    end if]@
+@[  end for]@
+
+@[end for]@
+  return true;
+}  // NOLINT(readability/fn_size)
+
 static bool _@(message.structure.namespaced_type.name)__cdr_serialize_with_endpoint(
   const void * untyped_ros_message,
   eprosima::fastcdr::Cdr & cdr,
@@ -1025,28 +1141,10 @@ static bool _@(message.structure.namespaced_type.name)__cdr_serialize_with_endpo
   }
   const @('__'.join(message.structure.namespaced_type.namespaced_name())) * ros_message =
     static_cast<const @('__'.join(message.structure.namespaced_type.namespaced_name())) *>(untyped_ros_message);
-  (void)endpoint_info;
-@[  for member in message.structure.members]@
-@[    if isinstance(member.type, UnboundedSequence) and isinstance(member.type.value_type, BasicType) and member.type.value_type.typename == 'uint8']@
-  // Field name: @(member.name) (buffer-aware)
-  {
-    rosidl_typesupport_fastrtps_cpp::serialize_buffer_or_c_sequence_with_endpoint(
-      cdr, ros_message->@(member.name), endpoint_info, serialization_context);
-  }
-@[    else]@
-  // Field name: @(member.name)
-@[    for line in generate_member_for_cdr_serialize(member, '')]@
-  @(line)
-@[    end for]@
-@[    end if]@
-
-@[  end for]@
-  return true;
+  return cdr_serialize_with_endpoint_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(
+    ros_message, cdr, endpoint_info, serialization_context);
 }
 
-// Endpoint-aware deserialization for C messages with Buffer fields.
-// For vendor-backed buffer data, creates a heap-allocated rosidl::Buffer<uint8_t>
-// and sets is_rosidl_buffer on the C sequence struct.
 static bool _@(message.structure.namespaced_type.name)__cdr_deserialize_with_endpoint(
   eprosima::fastcdr::Cdr & cdr,
   void * untyped_ros_message,
@@ -1059,33 +1157,16 @@ static bool _@(message.structure.namespaced_type.name)__cdr_deserialize_with_end
   }
   @('__'.join(message.structure.namespaced_type.namespaced_name())) * ros_message =
     static_cast<@('__'.join(message.structure.namespaced_type.namespaced_name())) *>(untyped_ros_message);
-  (void)endpoint_info;
-@[  for member in message.structure.members]@
-@[    if isinstance(member.type, UnboundedSequence) and isinstance(member.type.value_type, BasicType) and member.type.value_type.typename == 'uint8']@
-  // Field name: @(member.name) (buffer-aware)
-  {
-    if (!rosidl_typesupport_fastrtps_cpp::deserialize_buffer_or_c_sequence_with_endpoint(
-        cdr, ros_message->@(member.name), endpoint_info, serialization_context))
-    {
-      fprintf(stderr, "Failed to deserialize buffer field '@(member.name)'\n");
-      return false;
-    }
-  }
-@[    else]@
-  // Field name: @(member.name)
-@[    for line in generate_member_for_cdr_deserialize(member)]@
-@[      if line]@
-  @(line)
-@[      else]@
+  return cdr_deserialize_with_endpoint_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(
+    cdr, ros_message, endpoint_info, serialization_context);
+}
 
-@[      end if]@
-@[    end for]@
-@[    end if]@
-
-@[  end for]@
-  return true;
-}  // NOLINT(readability/fn_size)
-@[end if]@
+ROSIDL_TYPESUPPORT_FASTRTPS_C_PUBLIC_@(package_name)
+bool has_buffer_fields_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))()
+{
+  return
+    @(has_buffer_fields_expression);
+}
 @# // Collect the callback functions and provide a function to get the type support struct.
 
 static message_type_support_callbacks_t __callbacks_@(message.structure.namespaced_type.name) = {
@@ -1100,14 +1181,9 @@ static message_type_support_callbacks_t __callbacks_@(message.structure.namespac
 @[  else]@
   nullptr,
 @[  end if]@
-  @('true' if has_buffer_fields else 'false'),
-@[  if has_buffer_fields]@
+  has_buffer_fields_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(),
   _@(message.structure.namespaced_type.name)__cdr_serialize_with_endpoint,
   _@(message.structure.namespaced_type.name)__cdr_deserialize_with_endpoint
-@[  else]@
-  nullptr,
-  nullptr
-@[  end if]@
 };
 
 static rosidl_message_type_support_t _@(message.structure.namespaced_type.name)__type_support = {
