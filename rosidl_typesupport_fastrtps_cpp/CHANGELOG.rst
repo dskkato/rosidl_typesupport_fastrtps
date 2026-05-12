@@ -2,6 +2,12 @@
 Changelog for package rosidl_typesupport_fastrtps_cpp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.10.1 (2026-05-13)
+-------------------
+* Clean up logs in buffer serialization functions (`#153 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/153>`_)
+* Update rosidl typesupport to support rosidl::Buffer in nested uint8[] (`#151 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/151>`_)
+* Contributors: CY Chen
+
 3.10.0 (2026-05-05)
 -------------------
 

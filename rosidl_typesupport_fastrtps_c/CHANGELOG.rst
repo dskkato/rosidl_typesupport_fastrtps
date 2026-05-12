@@ -2,6 +2,11 @@
 Changelog for package rosidl_typesupport_fastrtps_c
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.10.1 (2026-05-13)
+-------------------
+* Update rosidl typesupport to support rosidl::Buffer in nested uint8[] (`#151 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/151>`_)
+* Contributors: CY Chen
+
 3.10.0 (2026-05-05)
 -------------------
 
