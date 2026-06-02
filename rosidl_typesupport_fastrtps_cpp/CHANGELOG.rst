@@ -2,6 +2,14 @@
 Changelog for package rosidl_typesupport_fastrtps_cpp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* use variable to control shared/static build type (`#138 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/138>`_) (`#147 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/147>`_)
+  (cherry picked from commit 82f41be79fd5017f64c54be9cf0ef30fcb76d753)
+  Co-authored-by: Jay Sridharan <jayasurs@usc.edu>
+  Co-authored-by: Jay Sridharan <jsridharan@relativityspace.com>
+* Contributors: mergify[bot]
+
 3.6.3 (2025-11-21)
 ------------------
 * Switch ament_index_python and rosidl_cli to exec_depend. (`#137 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/137>`_) (`#140 <https://github.com/ros2/rosidl_typesupport_fastrtps/issues/140>`_)
