@@ -39,6 +39,7 @@ foreach(_abs_idl_file ${rosidl_generate_interfaces_ABS_IDL_FILES})
   list(APPEND _generated_files
     "${_output_path}/${_parent_folder}/detail/dds_fastrtps/${_header_name}__type_support.cpp"
     "${_output_path}/${_parent_folder}/detail/${_header_name}__rosidl_typesupport_fastrtps_cpp.hpp"
+    "${_output_path}/${_parent_folder}/detail/${_header_name}__serialization.hpp"
   )
 endforeach()
 
@@ -61,6 +62,7 @@ set(target_dependencies
   "${rosidl_typesupport_fastrtps_cpp_BIN}"
   ${rosidl_typesupport_fastrtps_cpp_GENERATOR_FILES}
   "${rosidl_typesupport_fastrtps_cpp_TEMPLATE_DIR}/idl__rosidl_typesupport_fastrtps_cpp.hpp.em"
+  "${rosidl_typesupport_fastrtps_cpp_TEMPLATE_DIR}/idl__serialization.hpp.em"
   "${rosidl_typesupport_fastrtps_cpp_TEMPLATE_DIR}/idl__type_support.cpp.em"
   "${rosidl_typesupport_fastrtps_cpp_TEMPLATE_DIR}/msg__rosidl_typesupport_fastrtps_cpp.hpp.em"
   "${rosidl_typesupport_fastrtps_cpp_TEMPLATE_DIR}/msg__type_support.cpp.em"

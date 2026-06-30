@@ -26,3 +26,13 @@ def test_cli_extension_for_smoke(tmp_path):
         typesupports=['fastrtps_cpp'],
         output_path=tmp_path
     )) > 0
+
+
+def test_cli_extension_generates_inline_serialization_header(tmp_path):
+    generated_files = generate(
+        package_name='rosidl_typesupport_fastrtps_cpp',
+        interface_files=[TEST_DIR + ':msg/Test.msg'],
+        typesupports=['fastrtps_cpp'],
+        output_path=tmp_path
+    )
+    assert any(path.endswith('__serialization.hpp') for path in generated_files)

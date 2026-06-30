@@ -32,6 +32,7 @@ header_files = [
     'rosidl_typesupport_fastrtps_cpp/message_type_support_decl.hpp',
     'rosidl_typesupport_fastrtps_cpp/serialization_helpers.hpp',
     include_base + '__rosidl_typesupport_fastrtps_c.h',
+    include_base + '__serialization.hpp',
     'fastcdr/Cdr.h',
 ]
 
@@ -251,13 +252,7 @@ cdr_serialize(
   const @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) & ros_message,
   eprosima::fastcdr::Cdr & cdr)
 {
-@[for member in message.structure.members]@
-@[  for line in generate_member_for_cdr_serialize(member, '')]@
-  @(line)
-@[  end for]@
-
-@[end for]@
-  return true;
+  return @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::cdr_serialize_impl(ros_message, cdr);
 }
 
 bool
@@ -266,106 +261,7 @@ cdr_deserialize(
   eprosima::fastcdr::Cdr & cdr,
   @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) & ros_message)
 {
-@[for member in message.structure.members]@
-  // Member: @(member.name)
-@[  if isinstance(member.type, AbstractNestedType)]@
-  {
-@[    if isinstance(member.type, Array)]@
-@[      if not isinstance(member.type.value_type, (NamespacedType, AbstractWString))]@
-    cdr >> ros_message.@(member.name);
-@[      else]@
-    for (size_t i = 0; i < @(member.type.size); i++) {
-@[        if isinstance(member.type.value_type, NamespacedType)]@
-      @('::'.join(member.type.value_type.namespaces))::typesupport_fastrtps_cpp::cdr_deserialize(
-        cdr,
-        ros_message.@(member.name)[i]);
-@[        else]@
-      bool succeeded = rosidl_typesupport_fastrtps_cpp::cdr_deserialize(cdr, ros_message.@(member.name)[i]);
-      if (!succeeded) {
-        fprintf(stderr, "failed to deserialize u16string\n");
-        return false;
-      }
-@[        end if]@
-    }
-@[      end if]@
-@[    else]@
-@[      if not isinstance(member.type.value_type, (NamespacedType, AbstractWString)) and not isinstance(member.type, BoundedSequence)]@
-    cdr >> ros_message.@(member.name);
-@[      else]@
-    uint32_t cdrSize;
-    cdr >> cdrSize;
-    size_t size = static_cast<size_t>(cdrSize);
-
-    // Check there are at least 'size' remaining bytes in the CDR stream before resizing
-    auto old_state = cdr.get_state();
-    bool correct_size = cdr.jump(size);
-    cdr.set_state(old_state);
-    if (!correct_size) {
-      fprintf(stderr, "sequence size exceeds remaining buffer\n");
-      return false;
-    }
-
-    ros_message.@(member.name).resize(size);
-@[        if isinstance(member.type.value_type, BasicType) and member.type.value_type.typename not in ('boolean', 'wchar')]@
-    if (size > 0) {
-      cdr.deserialize_array(&(ros_message.@(member.name)[0]), size);
-    }
-@[        else]@
-    for (size_t i = 0; i < size; i++) {
-@[            if isinstance(member.type.value_type, BasicType) and member.type.value_type.typename == 'boolean']@
-      uint8_t tmp;
-      cdr >> tmp;
-      ros_message.@(member.name)[i] = tmp ? true : false;
-@[            elif isinstance(member.type.value_type, BasicType) and member.type.value_type.typename == 'wchar']@
-      wchar_t tmp;
-      cdr >> tmp;
-      ros_message.@(member.name)[i] = static_cast<char16_t>(tmp);
-@[            elif isinstance(member.type.value_type, AbstractWString)]@
-      bool succeeded = rosidl_typesupport_fastrtps_cpp::cdr_deserialize(cdr, ros_message.@(member.name)[i]);
-      if (!succeeded) {
-        fprintf(stderr, "failed to deserialize u16string\n");
-        return false;
-      }
-@[            elif not isinstance(member.type.value_type, NamespacedType)]@
-      cdr >> ros_message.@(member.name)[i];
-@[            else]@
-      @('::'.join(member.type.value_type.namespaces))::typesupport_fastrtps_cpp::cdr_deserialize(
-        cdr, ros_message.@(member.name)[i]);
-@[            end if]@
-    }
-@[          end if]@
-@[      end if]@
-@[    end if]@
-  }
-@[  elif isinstance(member.type, BasicType) and member.type.typename == 'boolean']@
-  {
-    uint8_t tmp;
-    cdr >> tmp;
-    ros_message.@(member.name) = tmp ? true : false;
-  }
-@[  elif isinstance(member.type, BasicType) and member.type.typename == 'wchar']@
-  {
-    wchar_t tmp;
-    cdr >> tmp;
-    ros_message.@(member.name) = static_cast<char16_t>(tmp);
-  }
-@[  elif isinstance(member.type, AbstractWString)]@
-  {
-    bool succeeded = rosidl_typesupport_fastrtps_cpp::cdr_deserialize(cdr, ros_message.@(member.name));
-    if (!succeeded) {
-      fprintf(stderr, "failed to deserialize u16string\n");
-      return false;
-    }
-  }
-@[  elif not isinstance(member.type, NamespacedType)]@
-  cdr >> ros_message.@(member.name);
-@[  else]@
-  @('::'.join(member.type.namespaces))::typesupport_fastrtps_cpp::cdr_deserialize(
-    cdr, ros_message.@(member.name));
-@[  end if]@
-
-@[end for]@
-  return true;
+  return @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::cdr_deserialize_impl(cdr, ros_message);
 }  // NOLINT(readability/fn_size)
 
 // Endpoint-aware serialization. Always emitted so parent messages can recurse
@@ -378,22 +274,7 @@ cdr_serialize_with_endpoint(
   const rmw_topic_endpoint_info_t & endpoint_info,
   const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context)
 {
-  (void)ros_message;
-  (void)endpoint_info;
-  (void)serialization_context;
-  try {
-@[for member in message.structure.members]@
-@[  for line in generate_member_for_cdr_serialize(member, '_with_endpoint', 'endpoint_info')]@
-    @(line)
-@[  end for]@
-@[end for]@
-  } catch (const std::exception & e) {
-    RCUTILS_LOG_ERROR_NAMED(
-      "@(package_name).typesupport_fastrtps_cpp",
-      "cdr_serialize_with_endpoint failed: %s", e.what());
-    return false;
-  }
-  return true;
+  return @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::cdr_serialize_with_endpoint_impl(ros_message, cdr, endpoint_info, serialization_context);
 }
 
 // Endpoint-aware deserialization. Always emitted so parent messages can recurse
@@ -406,129 +287,7 @@ cdr_deserialize_with_endpoint(
   const rmw_topic_endpoint_info_t & endpoint_info,
   const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context)
 {
-  (void)ros_message;
-  (void)endpoint_info;
-  (void)serialization_context;
-@[for member in message.structure.members]@
-  // Member: @(member.name)
-@[  if isinstance(member.type, UnboundedSequence) and isinstance(member.type.value_type, BasicType) and member.type.value_type.typename == 'uint8']@
-  {
-    if (!rosidl_typesupport_fastrtps_cpp::deserialize_buffer_with_endpoint(
-        cdr, ros_message.@(member.name), endpoint_info, serialization_context))
-    {
-      RCUTILS_LOG_ERROR_NAMED(
-        "@(package_name).typesupport_fastrtps_cpp",
-        "cdr_deserialize_with_endpoint: failed to deserialize '@(member.name)'");
-      return false;
-    }
-  }
-@[  elif isinstance(member.type, AbstractNestedType)]@
-  {
-@[    if isinstance(member.type, Array)]@
-@[      if not isinstance(member.type.value_type, (NamespacedType, AbstractWString))]@
-    cdr >> ros_message.@(member.name);
-@[      else]@
-    for (size_t i = 0; i < @(member.type.size); i++) {
-@[        if isinstance(member.type.value_type, NamespacedType)]@
-      @('::'.join(member.type.value_type.namespaces))::typesupport_fastrtps_cpp::cdr_deserialize_with_endpoint(
-        cdr,
-        ros_message.@(member.name)[i],
-        endpoint_info,
-        serialization_context);
-@[        else]@
-      bool succeeded = rosidl_typesupport_fastrtps_cpp::cdr_deserialize(cdr, ros_message.@(member.name)[i]);
-      if (!succeeded) {
-        fprintf(stderr, "failed to deserialize u16string\n");
-        return false;
-      }
-@[        end if]@
-    }
-@[      end if]@
-@[    else]@
-@[      if not isinstance(member.type.value_type, (NamespacedType, AbstractWString)) and not isinstance(member.type, BoundedSequence)]@
-    cdr >> ros_message.@(member.name);
-@[      else]@
-    uint32_t cdrSize;
-    cdr >> cdrSize;
-    size_t size = static_cast<size_t>(cdrSize);
-
-    // Check there are at least 'size' remaining bytes in the CDR stream before resizing
-    auto old_state = cdr.get_state();
-    bool correct_size = cdr.jump(size);
-    cdr.set_state(old_state);
-    if (!correct_size) {
-      fprintf(stderr, "sequence size exceeds remaining buffer\n");
-      return false;
-    }
-
-    ros_message.@(member.name).resize(size);
-@[        if isinstance(member.type, BoundedSequence)]@
-    if (size > @(member.type.maximum_size)) {
-      throw std::runtime_error("vector size exceeds upper bound");
-    }
-@[        end if]@
-@[        if isinstance(member.type.value_type, BasicType) and member.type.value_type.typename not in ('boolean', 'wchar')]@
-    if (size > 0) {
-      cdr.deserialize_array(&(ros_message.@(member.name)[0]), size);
-    }
-@[        else]@
-    for (size_t i = 0; i < size; i++) {
-@[          if isinstance(member.type.value_type, BasicType) and member.type.value_type.typename == 'boolean']@
-      uint8_t tmp;
-      cdr >> tmp;
-      ros_message.@(member.name)[i] = tmp ? true : false;
-@[          elif isinstance(member.type.value_type, BasicType) and member.type.value_type.typename == 'wchar']@
-      wchar_t tmp;
-      cdr >> tmp;
-      ros_message.@(member.name)[i] = static_cast<char16_t>(tmp);
-@[          elif isinstance(member.type.value_type, AbstractWString)]@
-      bool succeeded = rosidl_typesupport_fastrtps_cpp::cdr_deserialize(cdr, ros_message.@(member.name)[i]);
-      if (!succeeded) {
-        fprintf(stderr, "failed to deserialize u16string\n");
-        return false;
-      }
-@[          elif not isinstance(member.type.value_type, NamespacedType)]@
-      cdr >> ros_message.@(member.name)[i];
-@[          else]@
-      @('::'.join(member.type.value_type.namespaces))::typesupport_fastrtps_cpp::cdr_deserialize_with_endpoint(
-        cdr,
-        ros_message.@(member.name)[i],
-        endpoint_info,
-        serialization_context);
-@[          end if]@
-    }
-@[        end if]@
-@[      end if]@
-@[    end if]@
-  }
-@[  elif isinstance(member.type, BasicType) and member.type.typename == 'boolean']@
-  cdr >> ros_message.@(member.name);
-@[  elif isinstance(member.type, BasicType) and member.type.typename == 'wchar']@
-  {
-    uint16_t wchar_value;
-    cdr >> wchar_value;
-    ros_message.@(member.name) = static_cast<wchar_t>(wchar_value);
-  }
-@[  elif isinstance(member.type, AbstractWString)]@
-  {
-    bool succeeded = rosidl_typesupport_fastrtps_cpp::cdr_deserialize(cdr, ros_message.@(member.name));
-    if (!succeeded) {
-      fprintf(stderr, "failed to deserialize u16string\n");
-      return false;
-    }
-  }
-@[  elif not isinstance(member.type, NamespacedType)]@
-  cdr >> ros_message.@(member.name);
-@[  else]@
-  @('::'.join(member.type.namespaces))::typesupport_fastrtps_cpp::cdr_deserialize_with_endpoint(
-    cdr,
-    ros_message.@(member.name),
-    endpoint_info,
-    serialization_context);
-@[  end if]@
-
-@[end for]@
-  return true;
+  return @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::cdr_deserialize_with_endpoint_impl(cdr, ros_message, endpoint_info, serialization_context);
 }  // NOLINT(readability/fn_size)
 @{
 
@@ -618,20 +377,7 @@ get_serialized_size(
   const @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) & ros_message,
   size_t current_alignment)
 {
-  size_t initial_alignment = current_alignment;
-
-  const size_t padding = 4;
-  const size_t wchar_size = 4;
-  (void)padding;
-  (void)wchar_size;
-
-@[for member in message.structure.members]@
-@[  for line in generate_member_for_get_serialized_size(member, '')]@
-  @(line)
-@[  end for]@
-
-@[end for]@
-  return current_alignment - initial_alignment;
+  return @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::get_serialized_size_impl(ros_message, current_alignment);
 }
 
 @{
@@ -732,46 +478,7 @@ max_serialized_size_@(message.structure.namespaced_type.name)(
   bool & is_plain,
   size_t current_alignment)
 {
-  size_t initial_alignment = current_alignment;
-
-  const size_t padding = 4;
-  const size_t wchar_size = 4;
-  size_t last_member_size = 0;
-  (void)last_member_size;
-  (void)padding;
-  (void)wchar_size;
-
-  full_bounded = true;
-  is_plain = true;
-
-@{
-last_member_name_ = None
-}@
-@[for member in message.structure.members]@
-@{
-last_member_name_ = member.name
-}@
-@[  for line in generate_member_for_max_serialized_size(member, '')]@
-  @(line)
-@[  end for]@
-@[end for]@
-
-  size_t ret_val = current_alignment - initial_alignment;
-@[if last_member_name_ is not None]@
-  if (is_plain) {
-    // All members are plain, and type is not empty.
-    // We still need to check that the in-memory alignment
-    // is the same as the CDR mandated alignment.
-    using DataType = @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]));
-    is_plain =
-      (
-      offsetof(DataType, @(last_member_name_)) +
-      last_member_size
-      ) == ret_val;
-  }
-
-@[end if]@
-  return ret_val;
+  return @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::max_serialized_size_impl_@(message.structure.namespaced_type.name)(full_bounded, is_plain, current_alignment);
 }
 
 bool
@@ -780,16 +487,7 @@ cdr_serialize_key(
   const @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) & ros_message,
   eprosima::fastcdr::Cdr & cdr)
 {
-@[for member in message.structure.members]@
-@[  if not member.has_annotation('key') and message.structure.has_any_member_with_annotation('key')]@
-@[  continue]@
-@[  end if]@
-@[  for line in generate_member_for_cdr_serialize(member, '_key')]@
-  @(line)
-@[  end for]@
-
-@[end for]@
-  return true;
+  return @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::cdr_serialize_key_impl(ros_message, cdr);
 }
 
 size_t
@@ -798,23 +496,7 @@ get_serialized_size_key(
   const @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) & ros_message,
   size_t current_alignment)
 {
-  size_t initial_alignment = current_alignment;
-
-  const size_t padding = 4;
-  const size_t wchar_size = 4;
-  (void)padding;
-  (void)wchar_size;
-
-@[for member in message.structure.members]@
-@[  if not member.has_annotation('key') and message.structure.has_any_member_with_annotation('key')]@
-@[  continue]@
-@[  end if]@
-@[  for line in generate_member_for_get_serialized_size(member, '_key')]@
-  @(line)
-@[  end for]@
-
-@[end for]@
-  return current_alignment - initial_alignment;
+  return @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::get_serialized_size_key_impl(ros_message, current_alignment);
 }
 
 size_t
@@ -824,49 +506,7 @@ max_serialized_size_key_@(message.structure.namespaced_type.name)(
   bool & is_plain,
   size_t current_alignment)
 {
-  size_t initial_alignment = current_alignment;
-
-  const size_t padding = 4;
-  const size_t wchar_size = 4;
-  size_t last_member_size = 0;
-  (void)last_member_size;
-  (void)padding;
-  (void)wchar_size;
-
-  full_bounded = true;
-  is_plain = true;
-
-@{
-last_member_name_ = None
-}@
-@[for member in message.structure.members]@
-@{
-last_member_name_ = member.name
-}@
-@[  if not member.has_annotation('key') and message.structure.has_any_member_with_annotation('key')]@
-@[  continue]@
-@[  end if]@
-@[  for line in generate_member_for_max_serialized_size(member, '_key')]@
-  @(line)
-@[  end for]@
-
-@[end for]@
-  size_t ret_val = current_alignment - initial_alignment;
-@[if last_member_name_ is not None]@
-  if (is_plain) {
-    // All members are plain, and type is not empty.
-    // We still need to check that the in-memory alignment
-    // is the same as the CDR mandated alignment.
-    using DataType = @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]));
-    is_plain =
-      (
-      offsetof(DataType, @(last_member_name_)) +
-      last_member_size
-      ) == ret_val;
-  }
-
-@[end if]@
-  return ret_val;
+  return @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::max_serialized_size_key_impl_@(message.structure.namespaced_type.name)(full_bounded, is_plain, current_alignment);
 }
 
 @[  if message.structure.has_any_member_with_annotation('key') ]@
@@ -878,7 +518,7 @@ static bool _@(message.structure.namespaced_type.name)__cdr_serialize_key(
     static_cast<const @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) *>(
     untyped_ros_message);
 
-  return cdr_serialize_key(*typed_message, cdr);
+  return @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::cdr_serialize_key_impl(*typed_message, cdr);
 }
 
 static
@@ -890,7 +530,7 @@ _@(message.structure.namespaced_type.name)__get_serialized_size_key(
     static_cast<const @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) *>(
     untyped_ros_message);
 
-  return get_serialized_size_key(*typed_message, 0);
+  return @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::get_serialized_size_key_impl(*typed_message, 0);
 }
 
 static size_t _@(message.structure.namespaced_type.name)__max_serialized_size_key(
@@ -899,7 +539,7 @@ static size_t _@(message.structure.namespaced_type.name)__max_serialized_size_ke
   bool full_bounded = true;
   bool is_plain = true;
 
-  size_t ret_val = max_serialized_size_key_@(message.structure.namespaced_type.name)(
+  size_t ret_val = @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::max_serialized_size_key_impl_@(message.structure.namespaced_type.name)(
     full_bounded,
     is_plain,
     0);
@@ -922,7 +562,7 @@ static bool _@(message.structure.namespaced_type.name)__cdr_serialize(
   auto typed_message =
     static_cast<const @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) *>(
     untyped_ros_message);
-  return cdr_serialize(*typed_message, cdr);
+  return @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::cdr_serialize_impl(*typed_message, cdr);
 }
 
 static bool _@(message.structure.namespaced_type.name)__cdr_deserialize(
@@ -932,7 +572,7 @@ static bool _@(message.structure.namespaced_type.name)__cdr_deserialize(
   auto typed_message =
     static_cast<@('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) *>(
     untyped_ros_message);
-  return cdr_deserialize(cdr, *typed_message);
+  return @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::cdr_deserialize_impl(cdr, *typed_message);
 }
 
 static uint32_t _@(message.structure.namespaced_type.name)__get_serialized_size(
@@ -941,7 +581,7 @@ static uint32_t _@(message.structure.namespaced_type.name)__get_serialized_size(
   auto typed_message =
     static_cast<const @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) *>(
     untyped_ros_message);
-  return static_cast<uint32_t>(get_serialized_size(*typed_message, 0));
+  return static_cast<uint32_t>(@('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::get_serialized_size_impl(*typed_message, 0));
 }
 
 static size_t _@(message.structure.namespaced_type.name)__max_serialized_size(char & bounds_info)
@@ -950,7 +590,7 @@ static size_t _@(message.structure.namespaced_type.name)__max_serialized_size(ch
   bool is_plain;
   size_t ret_val;
 
-  ret_val = max_serialized_size_@(message.structure.namespaced_type.name)(full_bounded, is_plain, 0);
+  ret_val = @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::max_serialized_size_impl_@(message.structure.namespaced_type.name)(full_bounded, is_plain, 0);
 
   bounds_info =
     is_plain ? ROSIDL_TYPESUPPORT_FASTRTPS_PLAIN_TYPE :
@@ -968,7 +608,7 @@ static bool _@(message.structure.namespaced_type.name)__cdr_serialize_with_endpo
   auto typed_message =
     static_cast<const @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) *>(
     untyped_ros_message);
-  return cdr_serialize_with_endpoint(*typed_message, cdr, endpoint_info, serialization_context);
+  return @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::cdr_serialize_with_endpoint_impl(*typed_message, cdr, endpoint_info, serialization_context);
 }
 
 // Endpoint-aware deserialization wrapper
@@ -981,7 +621,7 @@ static bool _@(message.structure.namespaced_type.name)__cdr_deserialize_with_end
   auto typed_message =
     static_cast<@('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) *>(
     untyped_ros_message);
-  return cdr_deserialize_with_endpoint(cdr, *typed_message, endpoint_info, serialization_context);
+  return @('::'.join([package_name] + list(interface_path.parents[0].parts)))::typesupport_fastrtps_cpp::detail::cdr_deserialize_with_endpoint_impl(cdr, *typed_message, endpoint_info, serialization_context);
 }
 
 bool
