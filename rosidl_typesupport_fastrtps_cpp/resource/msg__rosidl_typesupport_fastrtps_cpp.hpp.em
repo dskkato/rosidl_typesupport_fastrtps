@@ -43,6 +43,7 @@ header_files = [
 @{
 header_files = [
     'fastcdr/Cdr.h',
+    'rmw/topic_endpoint_info.h',
 ]
 }@
 @[for header_file in header_files]@
@@ -54,6 +55,12 @@ header_files = [
 @[    end if]@
 #include "@(header_file)"
 @[end for]@
+
+namespace rosidl_typesupport_fastrtps_cpp
+{
+struct BufferSerializationContext;
+}  // namespace rosidl_typesupport_fastrtps_cpp
+
 @[for ns in message.structure.namespaced_type.namespaces]@
 
 namespace @(ns)
@@ -80,6 +87,14 @@ ROSIDL_TYPESUPPORT_FASTRTPS_CPP_PUBLIC_@(package_name)
 get_serialized_size(
   const @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) & ros_message,
   size_t current_alignment);
+
+size_t
+ROSIDL_TYPESUPPORT_FASTRTPS_CPP_PUBLIC_@(package_name)
+get_serialized_size_with_endpoint(
+  const @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) & ros_message,
+  size_t current_alignment,
+  const rmw_topic_endpoint_info_t & endpoint_info,
+  const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context);
 
 size_t
 ROSIDL_TYPESUPPORT_FASTRTPS_CPP_PUBLIC_@(package_name)

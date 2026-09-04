@@ -696,6 +696,17 @@ size_t get_serialized_size_@('__'.join([package_name] + list(interface_path.pare
   return impl_get_serialized_size_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(untyped_ros_message, current_alignment);
 }
 
+ROSIDL_TYPESUPPORT_FASTRTPS_C_PUBLIC_@(package_name)
+size_t get_serialized_size_with_endpoint_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(
+  const void * untyped_ros_message,
+  size_t current_alignment,
+  const rmw_topic_endpoint_info_t & endpoint_info,
+  const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context)
+{
+  return impl_get_serialized_size_with_endpoint_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(
+    untyped_ros_message, current_alignment, endpoint_info, serialization_context);
+}
+
 @{
 
 # Generates the definition for the max_serialized_size family of methods given a structure member
@@ -974,6 +985,17 @@ static bool _@(message.structure.namespaced_type.name)__cdr_deserialize_with_end
     cdr, ros_message, endpoint_info, serialization_context);
 }
 
+static uint32_t _@(message.structure.namespaced_type.name)__get_serialized_size_with_endpoint(
+  const void * untyped_ros_message,
+  size_t current_alignment,
+  const rmw_topic_endpoint_info_t & endpoint_info,
+  const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context)
+{
+  return static_cast<uint32_t>(
+    get_serialized_size_with_endpoint_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(
+      untyped_ros_message, current_alignment, endpoint_info, serialization_context));
+}
+
 ROSIDL_TYPESUPPORT_FASTRTPS_C_PUBLIC_@(package_name)
 bool has_buffer_fields_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))()
 {
@@ -996,7 +1018,8 @@ static message_type_support_callbacks_t __callbacks_@(message.structure.namespac
 @[  end if]@
   has_buffer_fields_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(),
   _@(message.structure.namespaced_type.name)__cdr_serialize_with_endpoint,
-  _@(message.structure.namespaced_type.name)__cdr_deserialize_with_endpoint
+  _@(message.structure.namespaced_type.name)__cdr_deserialize_with_endpoint,
+  _@(message.structure.namespaced_type.name)__get_serialized_size_with_endpoint
 };
 
 static rosidl_message_type_support_t _@(message.structure.namespaced_type.name)__type_support = {

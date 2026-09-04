@@ -31,6 +31,7 @@ namespace rosidl_typesupport_fastrtps_cpp
 
 /// Feature define to allow API version detection
 #define ROSIDL_TYPESUPPORT_FASTRTPS_HAS_PLAIN_TYPES
+#define ROSIDL_TYPESUPPORT_FASTRTPS_HAS_ENDPOINT_AWARE_SERIALIZED_SIZE
 
 #define ROSIDL_TYPESUPPORT_FASTRTPS_UNBOUNDED_TYPE 0x00
 #define ROSIDL_TYPESUPPORT_FASTRTPS_BOUNDED_TYPE   0x01
@@ -153,6 +154,21 @@ typedef struct message_type_support_callbacks_t
   bool (* cdr_deserialize_with_endpoint)(
     eprosima::fastcdr::Cdr & cdr,
     void * untyped_ros_message,
+    const rmw_topic_endpoint_info_t & endpoint_info,
+    const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context);
+
+  /// Callback function to get the endpoint-aware size of data
+  /// Only called if has_buffer_fields is true.
+  /**
+   * \param[in] untyped_ros_message Type erased pointer to message instance.
+   * \param[in] current_alignment Current alignment before serializing this message.
+   * \param[in] endpoint_info Endpoint info for the remote peer.
+   * \param[in] serialization_context RMW-owned descriptor context.
+   * \return The size of the serialized message in bytes, excluding CDR encapsulation.
+   */
+  uint32_t (* get_serialized_size_with_endpoint)(
+    const void * untyped_ros_message,
+    size_t current_alignment,
     const rmw_topic_endpoint_info_t & endpoint_info,
     const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context);
 } message_type_support_callbacks_t;

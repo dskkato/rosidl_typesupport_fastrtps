@@ -62,6 +62,8 @@ struct BufferDescriptorSerializers
     const rmw_topic_endpoint_info_t &, const BufferSerializationContext &)> serialize;
   std::function<std::shared_ptr<void>(eprosima::fastcdr::Cdr &,
     const rmw_topic_endpoint_info_t &, const BufferSerializationContext &)> deserialize;
+  std::function<size_t(const std::shared_ptr<void> &, size_t,
+    const rmw_topic_endpoint_info_t &, const BufferSerializationContext &)> get_serialized_size;
 };
 
 /// RMW-owned descriptor context passed through endpoint-aware callbacks.
@@ -119,6 +121,67 @@ inline size_t get_buffer_serialized_size(
     // Take the max: serialization may use the descriptor path or fall back to CPU.
     current_alignment = std::max(descriptor_alignment, cpu_alignment);
   }
+
+  return current_alignment - initial_alignment;
+}
+
+/// Get the serialized size of Buffer<T> using the same endpoint-specific backend
+/// selection as serialize_buffer_with_endpoint().
+template<typename T, typename Allocator>
+inline size_t get_buffer_serialized_size_with_endpoint(
+  const rosidl::Buffer<T, Allocator> & buffer,
+  size_t current_alignment,
+  const rmw_topic_endpoint_info_t & endpoint_info,
+  const BufferSerializationContext & serialization_context)
+{
+  const size_t initial_alignment = current_alignment;
+  const size_t padding = 4;
+
+  const auto get_cpu_size = [&buffer, padding](size_t alignment) {
+      const size_t initial_cpu_alignment = alignment;
+      alignment += eprosima::fastcdr::Cdr::alignment(alignment, padding);
+      alignment += padding;
+      if (buffer.size() > 0) {
+        const size_t item_size = sizeof(T);
+        alignment += eprosima::fastcdr::Cdr::alignment(alignment, item_size);
+        alignment += buffer.size() * item_size;
+      }
+      return alignment - initial_cpu_alignment;
+    };
+
+  const std::string backend_type = buffer.get_backend_type();
+  if (backend_type == "cpu") {
+    return get_cpu_size(current_alignment);
+  }
+
+  const auto * impl = buffer.get_impl();
+  if (!impl) {
+    throw std::runtime_error("Buffer implementation is null");
+  }
+
+  auto ops_it = serialization_context.descriptor_ops.find(backend_type);
+  auto ser_it = serialization_context.descriptor_serializers.find(backend_type);
+  if (ops_it == serialization_context.descriptor_ops.end() ||
+    ser_it == serialization_context.descriptor_serializers.end())
+  {
+    return get_cpu_size(current_alignment);
+  }
+
+  auto descriptor = ops_it->second.create_descriptor_with_endpoint(impl, endpoint_info);
+  if (!descriptor) {
+    return get_cpu_size(current_alignment);
+  }
+  if (!ser_it->second.get_serialized_size) {
+    throw std::runtime_error("Buffer descriptor serialized-size callback is not available");
+  }
+
+  current_alignment += eprosima::fastcdr::Cdr::alignment(current_alignment, padding);
+  current_alignment += padding;  // kBufferDescriptorMarker1
+  current_alignment += padding;  // kBufferDescriptorMarker2
+  current_alignment += eprosima::fastcdr::Cdr::alignment(current_alignment, padding);
+  current_alignment += padding + backend_type.size() + 1;
+  current_alignment += ser_it->second.get_serialized_size(
+    descriptor, current_alignment, endpoint_info, serialization_context);
 
   return current_alignment - initial_alignment;
 }

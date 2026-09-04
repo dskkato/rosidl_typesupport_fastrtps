@@ -565,7 +565,7 @@ def generate_member_for_get_serialized_size(member, suffix):
   # for the descriptor marker + backend_type string + kMaxBufferDescriptorSize
   # that cdr_serialize_with_endpoint actually writes.
   if (
-    suffix == '' and
+    suffix in ('', '_with_endpoint') and
     isinstance(member.type, UnboundedSequence) and
     isinstance(member.type.value_type, BasicType) and
     member.type.value_type.typename == 'uint8'
@@ -575,8 +575,14 @@ def generate_member_for_get_serialized_size(member, suffix):
     strlist.append('    auto * buffer = reinterpret_cast<const rosidl::Buffer<uint8_t> *>(ros_message->%s.data);' % member.name)
     strlist.append('    if (buffer != nullptr) {')
     strlist.append('      current_alignment +=')
-    strlist.append('        rosidl_typesupport_fastrtps_cpp::get_buffer_serialized_size(')
-    strlist.append('        *buffer, current_alignment);')
+    if suffix == '_with_endpoint':
+      strlist.append(
+        '        rosidl_typesupport_fastrtps_cpp::get_buffer_serialized_size_with_endpoint(')
+      strlist.append(
+        '        *buffer, current_alignment, endpoint_info, serialization_context);')
+    else:
+      strlist.append('        rosidl_typesupport_fastrtps_cpp::get_buffer_serialized_size(')
+      strlist.append('        *buffer, current_alignment);')
     strlist.append('    }')
     strlist.append('  } else {')
     strlist.append('    size_t array_size = ros_message->%s.size;' % member.name)
@@ -614,7 +620,11 @@ def generate_member_for_get_serialized_size(member, suffix):
     else:
       strlist.append('  for (size_t index = 0; index < array_size; ++index) {')
       strlist.append('    current_alignment += impl_get_serialized_size%s_%s(' % (suffix, ('__'.join(member.type.value_type.namespaced_name()))))
-      strlist.append('      &array_ptr[index], current_alignment);')
+      if suffix == '_with_endpoint':
+        strlist.append(
+          '      &array_ptr[index], current_alignment, endpoint_info, serialization_context);')
+      else:
+        strlist.append('      &array_ptr[index], current_alignment);')
       strlist.append('  }')
     strlist.append('}')
   else:
@@ -632,7 +642,12 @@ def generate_member_for_get_serialized_size(member, suffix):
       strlist.append('}')
     else:
       strlist.append('current_alignment += impl_get_serialized_size%s_%s(' % (suffix, ('__'.join(member.type.namespaced_name()))))
-      strlist.append('  &(ros_message->%s), current_alignment);' % (member.name))
+      if suffix == '_with_endpoint':
+        strlist.append(
+          '  &(ros_message->%s), current_alignment, endpoint_info, serialization_context);' %
+          (member.name))
+      else:
+        strlist.append('  &(ros_message->%s), current_alignment);' % (member.name))
   return strlist
 }@
 
@@ -652,6 +667,33 @@ size_t impl_get_serialized_size_@('__'.join([package_name] + list(interface_path
 
 @[for member in message.structure.members]@
 @[  for line in generate_member_for_get_serialized_size(member, '')]@
+  @(line)
+@[  end for]@
+
+@[end for]@
+  return current_alignment - initial_alignment;
+}
+
+inline
+size_t impl_get_serialized_size_with_endpoint_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(
+  const void * untyped_ros_message,
+  size_t current_alignment,
+  const rmw_topic_endpoint_info_t & endpoint_info,
+  const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context)
+{
+  const _@(message.structure.namespaced_type.name)__ros_msg_type * ros_message = static_cast<const _@(message.structure.namespaced_type.name)__ros_msg_type *>(untyped_ros_message);
+  (void)ros_message;
+  size_t initial_alignment = current_alignment;
+
+  const size_t padding = 4;
+  const size_t wchar_size = 4;
+  (void)padding;
+  (void)wchar_size;
+  (void)endpoint_info;
+  (void)serialization_context;
+
+@[for member in message.structure.members]@
+@[  for line in generate_member_for_get_serialized_size(member, '_with_endpoint')]@
   @(line)
 @[  end for]@
 

@@ -102,6 +102,18 @@ get_serialized_size(
 
 size_t
 ROSIDL_TYPESUPPORT_FASTRTPS_CPP_PUBLIC_@(package_name)
+get_serialized_size_with_endpoint(
+  const @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) & ros_message,
+  size_t current_alignment,
+  const rmw_topic_endpoint_info_t & endpoint_info,
+  const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context)
+{
+  return detail::get_serialized_size_with_endpoint(
+    ros_message, current_alignment, endpoint_info, serialization_context);
+}
+
+size_t
+ROSIDL_TYPESUPPORT_FASTRTPS_CPP_PUBLIC_@(package_name)
 max_serialized_size_@(message.structure.namespaced_type.name)(
   bool & full_bounded,
   bool & is_plain,
@@ -255,6 +267,19 @@ static bool _@(message.structure.namespaced_type.name)__cdr_deserialize_with_end
   return cdr_deserialize_with_endpoint(cdr, *typed_message, endpoint_info, serialization_context);
 }
 
+static uint32_t _@(message.structure.namespaced_type.name)__get_serialized_size_with_endpoint(
+  const void * untyped_ros_message,
+  size_t current_alignment,
+  const rmw_topic_endpoint_info_t & endpoint_info,
+  const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context)
+{
+  auto typed_message =
+    static_cast<const @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) *>(
+    untyped_ros_message);
+  return static_cast<uint32_t>(get_serialized_size_with_endpoint(
+      *typed_message, current_alignment, endpoint_info, serialization_context));
+}
+
 bool
 ROSIDL_TYPESUPPORT_FASTRTPS_CPP_PUBLIC_@(package_name)
 has_buffer_fields_@(message.structure.namespaced_type.name)()
@@ -276,7 +301,8 @@ static message_type_support_callbacks_t _@(message.structure.namespaced_type.nam
 @[  end if]@
   has_buffer_fields_@(message.structure.namespaced_type.name)(),
   _@(message.structure.namespaced_type.name)__cdr_serialize_with_endpoint,
-  _@(message.structure.namespaced_type.name)__cdr_deserialize_with_endpoint
+  _@(message.structure.namespaced_type.name)__cdr_deserialize_with_endpoint,
+  _@(message.structure.namespaced_type.name)__get_serialized_size_with_endpoint
 };
 
 static rosidl_message_type_support_t _@(message.structure.namespaced_type.name)__handle = {

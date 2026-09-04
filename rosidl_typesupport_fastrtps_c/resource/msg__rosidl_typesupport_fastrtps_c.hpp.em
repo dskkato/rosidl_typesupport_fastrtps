@@ -14,6 +14,7 @@ header_files = [
     package_name + '/msg/rosidl_typesupport_fastrtps_c__visibility_control.h',
     include_base + '__struct.h',
     'fastcdr/Cdr.h',
+    'rmw/topic_endpoint_info.h',
 ]
 }@
 @[for header_file in header_files]@
@@ -31,6 +32,11 @@ header_files = [
 @[end for]@
 
 #ifdef __cplusplus
+namespace rosidl_typesupport_fastrtps_cpp
+{
+struct BufferSerializationContext;
+}  // namespace rosidl_typesupport_fastrtps_cpp
+
 extern "C"
 {
 #endif
@@ -49,6 +55,13 @@ ROSIDL_TYPESUPPORT_FASTRTPS_C_PUBLIC_@(package_name)
 size_t get_serialized_size_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(
   const void * untyped_ros_message,
   size_t current_alignment);
+
+ROSIDL_TYPESUPPORT_FASTRTPS_C_PUBLIC_@(package_name)
+size_t get_serialized_size_with_endpoint_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(
+  const void * untyped_ros_message,
+  size_t current_alignment,
+  const rmw_topic_endpoint_info_t & endpoint_info,
+  const rosidl_typesupport_fastrtps_cpp::BufferSerializationContext & serialization_context);
 
 ROSIDL_TYPESUPPORT_FASTRTPS_C_PUBLIC_@(package_name)
 size_t max_serialized_size_@('__'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(
